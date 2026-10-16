@@ -60,9 +60,19 @@ input[type=date]{height:40px;border-radius:12px;background:var(--card);border:1p
 .st button{width:38px;height:38px;border-radius:11px;background:var(--soft);font-size:20px;font-weight:700}
 .st button.pk{width:auto;padding:0 9px;font-size:12.5px;background:var(--acc);color:var(--accfg)}
 .st input{width:46px;height:38px;text-align:center;border:1px solid var(--line);border-radius:11px;background:transparent;font-weight:700}
-.cr{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.cr label{font-size:12px;color:var(--mut);display:grid;gap:2px}
-.cr input{height:36px;border:1px solid var(--line);border-radius:10px;padding:0 8px;background:transparent;width:100%}
+.cr{grid-column:1/-1}
+.cr .hn{font-size:12.5px;color:var(--mut);margin:2px 2px 0}
+.cs{background:var(--soft);border-radius:12px;padding:8px 10px;margin-bottom:6px}
+.cs .ch{display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.cs .ch span{color:var(--mut);font-variant-numeric:tabular-nums}
+.lk{font-size:12.5px;color:var(--danger);margin-left:8px;text-decoration:underline}
+.cl{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;min-height:32px;align-items:center}
+.mt{color:var(--mut);font-size:13px;font-style:normal}
+.cp{height:32px;border-radius:16px;padding:0 5px 0 13px;background:var(--card);border:1px solid var(--line);font-weight:700;display:flex;align-items:center;gap:7px}
+.cp i{font-style:normal;color:var(--mut);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--soft)}
+.ca{display:flex;gap:6px}
+.ca .btn{height:38px;padding:0 10px;font-size:13.5px;white-space:nowrap}
+.ca input{flex:1;min-width:0;height:38px;border:1px solid var(--line);border-radius:10px;padding:0 6px;background:var(--card);text-align:center}
 .sb{grid-column:1/-1;display:flex;justify-content:space-between;font-size:13px;color:var(--mut);font-variant-numeric:tabular-nums}
 .sb b{color:var(--ink)}
 .fld{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
@@ -183,8 +193,28 @@ function sumCard(c){
   h+='</div><div class="acts"><button class="btn" data-a="print">Cetak Struk</button>'+(DL?'<button class="btn" data-a="saveRc">Simpan Struk</button>':'')+'</div>';
   return h+'</section>';
 }
-function cy(id){return (S.carry[cur]&&S.carry[cur][id])||{}}
+function sum(a){return (a||[]).reduce(function(x,y){return x+y},0)}
+function cy(id){
+  var y=(S.carry[cur]&&S.carry[cur][id])||{};
+  if(y.b||y.s)return {b:(y.b||[]).slice(),s:(y.s||[]).slice()};
+  var it=findItem(id),p=(it&&it.pack)||10,o={b:[],s:[]},bp=y.bp!==undefined?y.bp:(y.pk||0),i,r;
+  for(i=0;i<Math.floor(bp);i++)o.b.push(p);
+  r=Math.round((bp-Math.floor(bp))*p)+(y.bb||0);if(r>0)o.b.push(r);
+  for(i=0;i<Math.floor(y.sp||0);i++)o.s.push(p);
+  r=(y.sb||0)+(y.sisa||0);if(r>0)o.s.push(r);
+  return o;
+}
+function carryQty(o){return Math.max(0,sum(o.b)-sum(o.s))}
+function cset(id,fn){var o=cy(id);fn(o);(S.carry[cur]=S.carry[cur]||{})[id]=o;setQ(id,carryQty(o))}
 function clr(id){if(S.carry[cur])delete S.carry[cur][id]}
+function carryHint(o,c){return (o.b.length||o.s.length)?'Bawa '+sum(o.b)+' bks, sisa '+sum(o.s)+' bks = terjual '+c+' bks':''}
+function side(it,o,k,label){
+  var a=o[k],d=' data-i="'+it.id+'" data-k="'+k+'"';
+  var h='<div class="cs"><div class="ch"><b>'+label+'</b><span>'+sum(a)+' bks'+(a.length?'<button class="lk" data-a="cclr"'+d+'>kosongkan</button>':'')+'</span></div><div class="cl">';
+  if(!a.length)h+='<em class="mt">belum ada</em>';
+  a.forEach(function(n,x){h+='<button class="cp" data-a="cdel"'+d+' data-x="'+x+'" aria-label="Hapus pack isi '+n+' bungkus">'+n+'<i>&times;</i></button>'});
+  return h+'</div><div class="ca"><button class="btn p" data-a="cadd"'+d+' data-n="'+it.pack+'">+ Pack penuh ('+it.pack+')</button><input id="cp-'+it.id+'-'+k+'" type="number" inputmode="numeric" min="1" step="1" placeholder="isi" aria-label="Isi bungkus pack sebagian"><button class="btn" data-a="cpart"'+d+'>+ Sebagian</button></div></div>';
+}
 function jual(){
   var q=S.sales[cur]||{},h='',c0=calc(cur);
   if(!S.suppliers.length)return '<p class="empty">Belum ada penyetor. Tambah dulu di tab Atur.</p>';
@@ -198,7 +228,7 @@ function jual(){
       +'<input type="number" inputmode="numeric" min="0" data-f="qty" data-i="'+it.id+'" value="'+c+'" aria-label="Terjual">'
       +'<button data-a="inc" data-i="'+it.id+'" aria-label="Tambah">+</button>'
       +'<button class="pk" data-a="pack" data-i="'+it.id+'" aria-label="Tambah satu pack">+'+it.pack+'</button></div>'
-      +'<div class="cr"><label>Bawa pagi (pack)<input type="number" inputmode="decimal" step="any" min="0" data-f="bawa" data-i="'+it.id+'" value="'+(y.pk===undefined?'':y.pk)+'"></label><label>Sisa malam (bungkus)<input type="number" inputmode="numeric" min="0" data-f="sisa" data-i="'+it.id+'" value="'+(y.sisa===undefined?'':y.sisa)+'"></label></div>'
+      +'<div class="cr">'+side(it,y,'b','Bawa pagi')+side(it,y,'s','Sisa malam')+(carryHint(y,c)?'<div class="hn">'+carryHint(y,c)+'</div>':'')+'</div>'
       +'<div class="sb"><span>kotor <b>'+rp(c*it.price)+'</b></span><span>setor <b>'+rp(c*it.setor)+'</b></span><span>bersih <b>'+rp(c*(it.price-it.setor))+'</b></span></div></div>';
     });
     h+='</section>';
@@ -332,6 +362,10 @@ document.addEventListener('click',function(e){
   else if(a==='yday'){cur=addDays(today(),-1)}
   else if(a==='today'){cur=today()}
   else if(a==='filt'){filt=b.dataset.v;applyQ();return}
+  else if(a==='cadd'){cset(i,function(o){o[b.dataset.k].push(+b.dataset.n||10)})}
+  else if(a==='cpart'){var pi=document.getElementById('cp-'+i+'-'+b.dataset.k),pn=Math.floor(+(pi&&pi.value)||0);if(pn<1){toast('Isi jumlah bungkus dulu');return}cset(i,function(o){o[b.dataset.k].push(pn)})}
+  else if(a==='cdel'){cset(i,function(o){o[b.dataset.k].splice(+b.dataset.x,1)})}
+  else if(a==='cclr'){cset(i,function(o){o[b.dataset.k]=[]})}
   else if(a==='addItem'){sup(s).items.push({id:uid(),name:'Barang baru',price:2500,setor:2000,pack:10})}
   else if(a==='addSup'){S.suppliers.push({id:uid(),name:'Penyetor baru',phone:'',items:[]})}
   else if(a==='addExp'){
@@ -355,14 +389,9 @@ document.addEventListener('change',function(e){
   var f=e.target.dataset.f;if(!f)return;
   var v=e.target.value,i=e.target.dataset.i,s=e.target.dataset.s;
   if(f==='qty'){setQ(i,v);clr(i)}
-  else if(f==='bawa'||f==='sisa'){
-    var cc=S.carry[cur]=S.carry[cur]||{},o=cc[i]=cc[i]||{};
-    o[f==='bawa'?'pk':'sisa']=v===''?undefined:Math.max(0,+v||0);
-    setQ(i,(o.pk||0)*(findItem(i).pack||10)-(o.sisa||0));
-  }
   else if(f==='sname')sup(s).name=v.trim()||'Penyetor';
   else if(f==='sphone')sup(s).phone=v.trim();
-  else{var it=findItem(i);if(f==='iname')it.name=v.trim()||'Barang';else it[f]=Math.max(f==='pack'?1:0,Math.round(+v||0))}
+  else{var it=findItem(i);if(f==='iname')it.name=v.trim()||'Barang';else it[f]=Math.max(f==='pack'?1:0,Math.round(+v||0));if(f==='pack'&&S.carry[cur]&&S.carry[cur][i])setQ(i,carryQty(cy(i)))}
   save();render();
 });
 document.getElementById('fi').addEventListener('change',function(e){
@@ -382,6 +411,7 @@ document.getElementById('th').addEventListener('click',function(){
   S.theme=dark?'light':'dark';save();theme();
 });
 document.getElementById('sq').addEventListener('input',applyQ);
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.id&&e.target.id.indexOf('cp-')===0){e.preventDefault();var bt=e.target.parentNode.querySelector('[data-a=cpart]');if(bt)bt.click()}});
 theme();render();
 </script>
 </body>

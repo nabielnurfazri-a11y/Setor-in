@@ -1,5 +1,5 @@
 // Naikkan angka versi ini setiap kali kamu mengganti file aplikasi.
-const V = 'hitung-setoran-v1';
+const V = 'hitung-setoran-v3';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
 
 self.addEventListener('install', e => {
